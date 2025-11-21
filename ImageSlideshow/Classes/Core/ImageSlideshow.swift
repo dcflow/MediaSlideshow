@@ -51,6 +51,8 @@ public enum ImagePreload {
     case all
 }
 
+var maxviews: Int?
+
 /// Main view containing the Image Slideshow
 @objcMembers
 open class ImageSlideshow: UIView {
@@ -193,6 +195,12 @@ open class ImageSlideshow: UIView {
             slideshowTimer = nil
             setTimerIfNeeded()
         }
+    }
+
+    open var max: Int? {
+      didSet {
+        maxviews = max
+      }
     }
 
     /// Image preload configuration, can be sed to .fixed to enable lazy load or .all
