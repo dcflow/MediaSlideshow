@@ -35,7 +35,7 @@ extension UIPageControl: PageIndicatorView {
 
     open override func sizeToFit() {
         var frame = self.frame
-        frame.size = size(forNumberOfPages: numberOfPages)
+        frame.size = size(forNumberOfPages: maxviews ?? numberOfPages)
         frame.size.height = 30
         self.frame = frame
     }
