@@ -197,6 +197,7 @@ open class ImageSlideshow: UIView {
         }
     }
 
+    /// Set max indicators in the control
     open var max: Int? {
       didSet {
         maxviews = max
