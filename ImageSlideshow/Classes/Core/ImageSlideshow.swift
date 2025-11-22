@@ -203,6 +203,8 @@ open class ImageSlideshow: UIView {
         maxviews = max
       }
     }
+  
+    open var base: CGFloat = 10
 
     /// Image preload configuration, can be sed to .fixed to enable lazy load or .all
     open var preload = ImagePreload.all
@@ -298,9 +300,18 @@ open class ImageSlideshow: UIView {
             if #available(iOS 11.0, *) {
                 edgeInsets = safeAreaInsets
             }
-
+          
+            if #available(iOS 14.0, *) {
+              if let control = pageIndicator?.view as? UIPageControl, control.backgroundStyle == .prominent {
+                edgeInsets.bottom += base
+              }
+            }
+          
             pageIndicatorView.sizeToFit()
-            pageIndicatorView.frame = pageIndicatorPosition.indicatorFrame(for: frame, indicatorSize: pageIndicatorView.frame.size, edgeInsets: edgeInsets)
+            
+            let indicatorSize = pageIndicatorView.frame.size
+          
+            pageIndicatorView.frame = pageIndicatorPosition.indicatorFrame(for: frame, indicatorSize: indicatorSize, edgeInsets: edgeInsets)
         }
     }
 
