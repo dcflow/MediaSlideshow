@@ -46,6 +46,9 @@ open class FullScreenSlideshowViewController: UIViewController {
             slideshow.zoomEnabled = zoomEnabled
         }
     }
+    
+    open var didShow: (() -> Void)?
+    open var didDismiss: (() -> Void)?
 
     fileprivate var isInit = true
 
@@ -89,6 +92,12 @@ open class FullScreenSlideshowViewController: UIViewController {
             slideshow.setCurrentPage(initialPage, animated: false)
         }
     }
+    
+    override open func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        didShow?()
+    }
 
     override open func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
@@ -97,6 +106,15 @@ open class FullScreenSlideshowViewController: UIViewController {
 
         // Prevents broken dismiss transition when image is zoomed in
         slideshow.currentSlideshowItem?.zoomOut()
+    }
+    
+    override open func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+
+        // Only treat it as a fullscreen dismissal when we are actually being dismissed
+        if isBeingDismissed || (navigationController?.isBeingDismissed ?? false) {
+            didDismiss?()
+        }
     }
 
     open override func viewDidLayoutSubviews() {

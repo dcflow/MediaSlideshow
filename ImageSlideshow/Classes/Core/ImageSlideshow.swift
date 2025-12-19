@@ -26,6 +26,10 @@ public protocol ImageSlideshowDelegate: class {
     ///
     /// - Parameter imageSlideshow: image slideshow instance
     @objc optional func imageSlideshowDidEndDecelerating(_ imageSlideshow: ImageSlideshow)
+    
+    @objc optional func imageSlideshowDidShowFullscreen()
+    
+    @objc optional func imageSlideshowDidDismissFullscreen()
 }
 
 /** 
@@ -560,10 +564,22 @@ open class ImageSlideshow: UIView {
      - returns: FullScreenSlideshowViewController instance
      */
     @discardableResult
-    open func presentFullScreenController(from controller: UIViewController, completion: (() -> Void)? = nil) -> FullScreenSlideshowViewController {
+    open func presentFullScreenController(from controller: UIViewController,
+                                          completion: (() -> Void)? = nil) -> FullScreenSlideshowViewController {
         let fullscreen = FullScreenSlideshowViewController()
-        fullscreen.pageSelected = {[weak self] (page: Int) in
+
+        fullscreen.pageSelected = { [weak self] page in
             self?.setCurrentPage(page, animated: false)
+        }
+
+        fullscreen.didShow = { [weak self] in
+            guard let self else { return }
+            self.delegate?.imageSlideshowDidShowFullscreen?( )
+        }
+
+        fullscreen.didDismiss = { [weak self] in
+            guard let self else { return }
+            self.delegate?.imageSlideshowDidDismissFullscreen?( )
         }
 
         fullscreen.initialPage = currentPage
