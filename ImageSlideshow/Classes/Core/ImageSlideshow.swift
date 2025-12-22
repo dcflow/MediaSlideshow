@@ -221,6 +221,10 @@ open class ImageSlideshow: UIView {
             }
         }
     }
+    
+    open var fullscreenZoomInTransitionDuration: TimeInterval = 0.5
+    
+    open var fullscreenZoomOutTransitionDuration: TimeInterval = 0.25
 
     fileprivate var slideshowTimer: Timer?
     fileprivate var scrollViewImages = [InputSource]()
@@ -585,6 +589,8 @@ open class ImageSlideshow: UIView {
         fullscreen.initialPage = currentPage
         fullscreen.inputs = images
         slideshowTransitioningDelegate = ZoomAnimatedTransitioningDelegate(slideshowView: self, slideshowController: fullscreen)
+        slideshowTransitioningDelegate?.zoomInDuration = fullscreenZoomInTransitionDuration
+        slideshowTransitioningDelegate?.zoomOutDuration = fullscreenZoomOutTransitionDuration
         fullscreen.transitioningDelegate = slideshowTransitioningDelegate
         fullscreen.modalPresentationStyle = .custom
         controller.present(fullscreen, animated: true, completion: completion)

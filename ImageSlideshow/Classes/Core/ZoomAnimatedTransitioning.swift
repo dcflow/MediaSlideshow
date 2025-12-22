@@ -24,6 +24,12 @@ open class ZoomAnimatedTransitioningDelegate: NSObject, UIViewControllerTransiti
 
     /// Enables or disables swipe-to-dismiss interactive transition
     open var slideToDismissEnabled: Bool = true
+    
+    /// Duration of the zoom-in (presentation) transition
+    open var zoomInDuration: TimeInterval = 0.5
+
+    /// Duration of the zoom-out (dismissal) transition
+    open var zoomOutDuration: TimeInterval = 0.25
 
     /**
         Init the transitioning delegate with a source ImageSlideshow
@@ -184,69 +190,126 @@ class ZoomAnimator: NSObject {
 class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        return 0.5
+        return parent.zoomInDuration
     }
 
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
-        // Pauses slideshow
-        self.referenceSlideshowView?.pauseTimer()
+        // Pause slideshow while transitioning
+        referenceSlideshowView?.pauseTimer()
 
         let containerView = transitionContext.containerView
-        let fromViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.from)!
+        let fromVC = transitionContext.viewController(forKey: .from)!
 
-        guard let toViewController = transitionContext.viewController(forKey: UITransitionContextViewControllerKey.to) as? FullScreenSlideshowViewController else {
+        guard let toVC = transitionContext.viewController(forKey: .to) as? FullScreenSlideshowViewController else {
+            transitionContext.completeTransition(false)
             return
         }
 
-        toViewController.view.frame = transitionContext.finalFrame(for: toViewController)
+        // Ensure views are loaded so closeButton / pageIndicator exist
+        toVC.loadViewIfNeeded()
 
-        let transitionBackgroundView = UIView(frame: containerView.frame)
-        transitionBackgroundView.backgroundColor = toViewController.backgroundColor
-        containerView.addSubview(transitionBackgroundView)
+        let finalFrame = transitionContext.finalFrame(for: toVC)
+        toVC.view.frame = finalFrame
 
-        #if swift(>=4.2)
-        containerView.sendSubviewToBack(transitionBackgroundView)
-        #else
-        containerView.sendSubview(toBack: transitionBackgroundView)
-        #endif
+        // Add destination view immediately so it can layout (controls can show early)
+        containerView.addSubview(toVC.view)
 
-        let finalFrame = toViewController.view.frame
+        // --- Avoid "double image" ---
+        // Hide ONLY the slideshow scrollView (image content). The indicator is not inside the scrollView,
+        // so it can still appear immediately.
+        toVC.slideshow.scrollView.alpha = 0
 
+        // Prepare controls (chrome) to fade in quickly
+        toVC.closeButton.alpha = 0
+        toVC.slideshow.pageIndicator?.view.alpha = 0
+
+        // Force an early layout pass so the button/indicator frames are correct immediately
+        toVC.view.setNeedsLayout()
+        toVC.view.layoutIfNeeded()
+
+        // Optional: background under everything (helps if fromVC fades)
+        let transitionBackgroundView = UIView(frame: containerView.bounds)
+        transitionBackgroundView.backgroundColor = toVC.backgroundColor
+        containerView.insertSubview(transitionBackgroundView, belowSubview: toVC.view)
+
+        // Create the moving snapshot view
         var transitionView: UIImageView?
         var transitionViewFinalFrame = finalFrame
-        if let referenceImageView = referenceImageView {
-            transitionView = UIImageView(image: referenceImageView.image)
-            transitionView!.contentMode = UIViewContentMode.scaleAspectFill
-            transitionView!.clipsToBounds = true
-            transitionView!.frame = containerView.convert(referenceImageView.bounds, from: referenceImageView)
-            containerView.addSubview(transitionView!)
-            self.parent.referenceSlideshowViewFrame = transitionView!.frame
 
+        if let referenceImageView = referenceImageView {
+            let snapshot = UIImageView(image: referenceImageView.image)
+            snapshot.contentMode = .scaleAspectFill
+            snapshot.clipsToBounds = true
+            snapshot.frame = containerView.convert(referenceImageView.bounds, from: referenceImageView)
+            containerView.addSubview(snapshot)
+            containerView.bringSubviewToFront(snapshot)
+
+            transitionView = snapshot
+            parent.referenceSlideshowViewFrame = snapshot.frame
+
+            // Hide the source image during animation
             referenceImageView.alpha = 0
 
+            // Compute final aspect-fit frame for the snapshot
             if let image = referenceImageView.image {
                 transitionViewFinalFrame = image.tgr_aspectFitRectForSize(finalFrame.size)
             }
         }
 
-        if let item = toViewController.slideshow.currentSlideshowItem, item.zoomInInitially {
-            transitionViewFinalFrame.size = CGSize(width: transitionViewFinalFrame.size.width * item.maximumZoomScale, height: transitionViewFinalFrame.size.height * item.maximumZoomScale)
+        // Respect initial zoom-in if enabled
+        if let item = toVC.slideshow.currentSlideshowItem, item.zoomInInitially {
+            transitionViewFinalFrame.size = CGSize(
+                width: transitionViewFinalFrame.size.width * item.maximumZoomScale,
+                height: transitionViewFinalFrame.size.height * item.maximumZoomScale
+            )
         }
 
-        let duration: TimeInterval = transitionDuration(using: transitionContext)
+        let duration = transitionDuration(using: transitionContext)
 
-        UIView.animate(withDuration: duration, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 0, options: UIViewAnimationOptions.curveLinear, animations: {
-            fromViewController.view.alpha = 0
-            transitionView?.frame = transitionViewFinalFrame
-            transitionView?.center = CGPoint(x: finalFrame.midX, y: finalFrame.midY)
-        }, completion: {[ref = self.referenceImageView] _ in
-            fromViewController.view.alpha = 1
-            ref?.alpha = 1
-            transitionView?.removeFromSuperview()
-            transitionBackgroundView.removeFromSuperview()
-            containerView.addSubview(toViewController.view)
-            transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
-        })
+        UIView.animate(
+            withDuration: duration,
+            delay: 0,
+            usingSpringWithDamping: 0.9,
+            initialSpringVelocity: 0,
+            options: .curveLinear,
+            animations: {
+                // Fade presenter slightly (optional; keep if you like the look)
+                fromVC.view.alpha = 0
+
+                // Move snapshot into place
+                transitionView?.frame = transitionViewFinalFrame
+                transitionView?.center = CGPoint(x: finalFrame.midX, y: finalFrame.midY)
+
+                // Show controls early
+                toVC.closeButton.alpha = 1
+                toVC.slideshow.pageIndicator?.view.alpha = 1
+            },
+            completion: { [weak self] _ in
+                let completed = !transitionContext.transitionWasCancelled
+
+                // Restore presenter alpha
+                fromVC.view.alpha = 1
+
+                // Restore source image alpha
+                self?.referenceImageView?.alpha = 1
+
+                // Always restore destination content visibility
+                toVC.slideshow.scrollView.alpha = 1
+
+                if completed {
+                    transitionView?.removeFromSuperview()
+                    transitionBackgroundView.removeFromSuperview()
+                } else {
+                    // Transition cancelled: remove destination view we added early
+                    toVC.view.removeFromSuperview()
+
+                    transitionView?.removeFromSuperview()
+                    transitionBackgroundView.removeFromSuperview()
+                }
+
+                transitionContext.completeTransition(completed)
+            }
+        )
     }
 }
 
@@ -255,7 +318,7 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
     private var animatorForCurrentTransition: UIViewImplicitlyAnimating?
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
-        return 0.25
+        return parent.zoomOutDuration
     }
 
     @available(iOS 10.0, *)
