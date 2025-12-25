@@ -198,9 +198,7 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         referenceSlideshowView?.pauseTimer()
 
         let containerView = transitionContext.containerView
-        
-        containerView.layoutIfNeeded()
-        
+                
         let fromVC = transitionContext.viewController(forKey: .from)!
 
         guard let toVC = transitionContext.viewController(forKey: .to) as? FullScreenSlideshowViewController else {
@@ -348,7 +346,7 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
 
         let containerView = transitionContext.containerView
-
+        
         var transitionViewInitialFrame: CGRect
         if let currentSlideshowItem = fromViewController.slideshow.currentSlideshowItem {
             if let image = currentSlideshowItem.imageView.image {
@@ -363,14 +361,26 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
 
         var transitionViewFinalFrame: CGRect
         
+        let targetPage = fromViewController.slideshow.currentPage
+
+        if let ref = parent.referenceSlideshowView {
+            // HIDE FIRST — no frame where slideshow content can flash
+            ref.scrollView.isHidden = true
+
+            if ref.currentPage != targetPage {
+                ref.setCurrentPage(targetPage, animated: false)
+            }
+
+            ref.layoutIfNeeded()
+            ref.scrollView.layoutIfNeeded()
+        }
+        
         let liveReferenceImageView =
             parent.referenceSlideshowView?.currentSlideshowItem?.imageView ?? self.referenceImageView
 
         if let referenceImageView = liveReferenceImageView {
             referenceImageView.isHidden = true
-            parent.referenceSlideshowView?.scrollView.isHidden = true
-
-            self.referenceSlideshowView?.layoutIfNeeded()
+            
             referenceImageView.superview?.layoutIfNeeded()
             referenceImageView.layoutIfNeeded()
 
@@ -414,13 +424,14 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
         let completion = { (_: Any) in
             let completed = !transitionContext.transitionWasCancelled
-            self.parent.referenceSlideshowView?.scrollView.isHidden = false
-            liveReferenceImageView?.isHidden = false
             
-            // defensively force layout so there’s no “snap” frame
-            self.parent.referenceSlideshowView?.layoutIfNeeded()
-            liveReferenceImageView?.superview?.layoutIfNeeded()
-
+            UIView.performWithoutAnimation {
+                self.parent.referenceSlideshowView?.scrollView.isHidden = false
+                liveReferenceImageView?.isHidden = false
+                self.parent.referenceSlideshowView?.layoutIfNeeded()
+                liveReferenceImageView?.superview?.layoutIfNeeded()
+            }
+            
             if completed {
                 fromViewController.view.removeFromSuperview()
                 UIApplication.shared.keyWindow?.removeGestureRecognizer(self.parent.gestureRecognizer)
