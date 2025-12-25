@@ -361,13 +361,20 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         var transitionViewFinalFrame: CGRect
         if let referenceImageView = referenceImageView {
             referenceImageView.alpha = 0
+            
+            self.referenceSlideshowView?.layoutIfNeeded()
+            
+            referenceImageView.superview?.layoutIfNeeded()
+            referenceImageView.layoutIfNeeded()
 
             let referenceSlideshowViewFrame = containerView.convert(referenceImageView.bounds, from: referenceImageView)
             transitionViewFinalFrame = referenceSlideshowViewFrame
 
-            // do a frame scaling when AspectFit content mode enabled
-            if fromViewController.slideshow.currentSlideshowItem?.imageView.image != nil && referenceImageView.contentMode == UIViewContentMode.scaleAspectFit {
-                transitionViewFinalFrame = containerView.convert(referenceImageView.aspectToFitFrame(), from: referenceImageView)
+            if referenceImageView.contentMode == .scaleAspectFit,
+               let fullscreenImage = fromViewController.slideshow.currentSlideshowItem?.imageView.image {
+
+                let fitRectInRefBounds = fullscreenImage.tgr_aspectFitRectForSize(referenceImageView.bounds.size)
+                transitionViewFinalFrame = containerView.convert(fitRectInRefBounds, from: referenceImageView)
             }
 
             // fixes the problem when the referenceSlideshowViewFrame was shifted during change of the status bar hidden state
