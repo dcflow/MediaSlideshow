@@ -359,11 +359,14 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
 
         var transitionViewFinalFrame: CGRect
-        if let referenceImageView = referenceImageView {
+        
+        let liveReferenceImageView =
+            parent.referenceSlideshowView?.currentSlideshowItem?.imageView ?? self.referenceImageView
+
+        if let referenceImageView = liveReferenceImageView {
             referenceImageView.alpha = 0
-            
+
             self.referenceSlideshowView?.layoutIfNeeded()
-            
             referenceImageView.superview?.layoutIfNeeded()
             referenceImageView.layoutIfNeeded()
 
@@ -372,7 +375,6 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
 
             if referenceImageView.contentMode == .scaleAspectFit,
                let fullscreenImage = fromViewController.slideshow.currentSlideshowItem?.imageView.image {
-
                 let fitRectInRefBounds = fullscreenImage.tgr_aspectFitRectForSize(referenceImageView.bounds.size)
                 transitionViewFinalFrame = containerView.convert(fitRectInRefBounds, from: referenceImageView)
             }
@@ -408,7 +410,7 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
         let completion = { (_: Any) in
             let completed = !transitionContext.transitionWasCancelled
-            self.referenceImageView?.alpha = 1
+            liveReferenceImageView?.alpha = 1
 
             if completed {
                 fromViewController.view.removeFromSuperview()
