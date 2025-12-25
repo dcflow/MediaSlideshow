@@ -571,6 +571,7 @@ open class ImageSlideshow: UIView {
     open func presentFullScreenController(from controller: UIViewController,
                                           completion: (() -> Void)? = nil) -> FullScreenSlideshowViewController {
         let fullscreen = FullScreenSlideshowViewController()
+        fullscreen.slideshow.circular = self.circular
 
         fullscreen.pageSelected = { [weak self] page in
             self?.setCurrentPage(page, animated: false)
@@ -620,18 +621,6 @@ extension ImageSlideshow: UIScrollViewDelegate {
     }
 
     open func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard circular else {
-            let minOffset: CGFloat = 0
-            let maxOffset: CGFloat = scrollView.contentSize.width - scrollView.bounds.width
-
-            if scrollView.contentOffset.x < minOffset {
-                scrollView.contentOffset.x = minOffset
-            } else if scrollView.contentOffset.x > maxOffset {
-                scrollView.contentOffset.x = maxOffset
-            }
-            return
-        }
-        
         if circular && (scrollViewImages.count > 1) {
             let regularContentOffset = scrollView.frame.size.width * CGFloat(images.count)
 

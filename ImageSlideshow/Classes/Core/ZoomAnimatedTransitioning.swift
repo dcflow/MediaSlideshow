@@ -365,6 +365,7 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
 
         if let referenceImageView = liveReferenceImageView {
             referenceImageView.alpha = 0
+            parent.referenceSlideshowView?.scrollView.alpha = 0
 
             self.referenceSlideshowView?.layoutIfNeeded()
             referenceImageView.superview?.layoutIfNeeded()
@@ -410,6 +411,7 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
         let completion = { (_: Any) in
             let completed = !transitionContext.transitionWasCancelled
+            self.parent.referenceSlideshowView?.scrollView.alpha = 1
             liveReferenceImageView?.alpha = 1
 
             if completed {
