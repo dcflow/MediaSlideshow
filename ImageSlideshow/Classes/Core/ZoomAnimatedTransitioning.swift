@@ -198,6 +198,9 @@ class ZoomInAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         referenceSlideshowView?.pauseTimer()
 
         let containerView = transitionContext.containerView
+        
+        containerView.layoutIfNeeded()
+        
         let fromVC = transitionContext.viewController(forKey: .from)!
 
         guard let toVC = transitionContext.viewController(forKey: .to) as? FullScreenSlideshowViewController else {
@@ -364,8 +367,8 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
             parent.referenceSlideshowView?.currentSlideshowItem?.imageView ?? self.referenceImageView
 
         if let referenceImageView = liveReferenceImageView {
-            referenceImageView.alpha = 0
-            parent.referenceSlideshowView?.scrollView.alpha = 0
+            referenceImageView.isHidden = true
+            parent.referenceSlideshowView?.scrollView.isHidden = true
 
             self.referenceSlideshowView?.layoutIfNeeded()
             referenceImageView.superview?.layoutIfNeeded()
@@ -411,8 +414,12 @@ class ZoomOutAnimator: ZoomAnimator, UIViewControllerAnimatedTransitioning {
         }
         let completion = { (_: Any) in
             let completed = !transitionContext.transitionWasCancelled
-            self.parent.referenceSlideshowView?.scrollView.alpha = 1
-            liveReferenceImageView?.alpha = 1
+            self.parent.referenceSlideshowView?.scrollView.isHidden = false
+            liveReferenceImageView?.isHidden = false
+            
+            // defensively force layout so there’s no “snap” frame
+            self.parent.referenceSlideshowView?.layoutIfNeeded()
+            liveReferenceImageView?.superview?.layoutIfNeeded()
 
             if completed {
                 fromViewController.view.removeFromSuperview()
