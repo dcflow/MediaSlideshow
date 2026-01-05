@@ -27,9 +27,15 @@ public protocol ImageSlideshowDelegate: class {
     /// - Parameter imageSlideshow: image slideshow instance
     @objc optional func imageSlideshowDidEndDecelerating(_ imageSlideshow: ImageSlideshow)
     
+    @objc optional func imageSlideshowWillShowFullscreen()
+    
+    @objc optional func imageSlideshowWillDismissFullscreen()
+    
     @objc optional func imageSlideshowDidShowFullscreen()
     
     @objc optional func imageSlideshowDidDismissFullscreen()
+    
+    @objc optional func imageSlideshowDidCancelDismissFullscreen()
 }
 
 /** 
@@ -579,12 +585,27 @@ open class ImageSlideshow: UIView {
 
         fullscreen.didShow = { [weak self] in
             guard let self else { return }
-            self.delegate?.imageSlideshowDidShowFullscreen?( )
+            self.delegate?.imageSlideshowDidShowFullscreen?()
         }
 
         fullscreen.didDismiss = { [weak self] in
             guard let self else { return }
-            self.delegate?.imageSlideshowDidDismissFullscreen?( )
+            self.delegate?.imageSlideshowDidDismissFullscreen?()
+        }
+        
+        fullscreen.willShow = { [weak self] in
+            guard let self else { return }
+            self.delegate?.imageSlideshowWillShowFullscreen?()
+        }
+        
+        fullscreen.willDismiss = { [weak self] in
+            guard let self else { return }
+            self.delegate?.imageSlideshowWillDismissFullscreen?()
+        }
+        
+        fullscreen.didCancelDismiss = { [weak self] in
+            guard let self else { return }
+            self.delegate?.imageSlideshowDidCancelDismissFullscreen?()
         }
 
         fullscreen.initialPage = currentPage

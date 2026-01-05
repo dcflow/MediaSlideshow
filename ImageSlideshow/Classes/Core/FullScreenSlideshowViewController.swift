@@ -49,6 +49,11 @@ open class FullScreenSlideshowViewController: UIViewController {
     
     open var didShow: (() -> Void)?
     open var didDismiss: (() -> Void)?
+    
+    open var willShow: (() -> Void)?
+    open var willDismiss: (() -> Void)?
+    
+    open var didCancelDismiss: (() -> Void)?
 
     fileprivate var isInit = true
 
@@ -86,6 +91,8 @@ open class FullScreenSlideshowViewController: UIViewController {
 
     override open func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        willShow?()
 
         if isInit {
             isInit = false
@@ -101,6 +108,18 @@ open class FullScreenSlideshowViewController: UIViewController {
 
     override open func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        
+        if isBeingDismissed || transitionCoordinator?.isInteractive == true {
+            willDismiss?()
+        }
+        
+        if let tc = transitionCoordinator, tc.isInteractive {
+            tc.notifyWhenInteractionChanges { [weak self] context in
+                if context.isCancelled {
+                    self?.didCancelDismiss?()
+                }
+            }
+        }
 
         slideshow.slideshowItems.forEach { $0.cancelPendingLoad() }
 
