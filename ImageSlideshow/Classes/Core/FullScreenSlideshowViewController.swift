@@ -69,6 +69,8 @@ open class FullScreenSlideshowViewController: UIViewController {
 
     override open func viewDidLoad() {
         super.viewDidLoad()
+        
+        closeButton.isHidden = true
 
         view.backgroundColor = backgroundColor
         slideshow.backgroundColor = backgroundColor
